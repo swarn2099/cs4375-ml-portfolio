@@ -1,0 +1,120 @@
+---
+title: "Classification for Linear Models R Notebook"
+author: "Swarn Singh and Ved Nigam"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+####I used the following dataset from Kaggle: https://www.kaggle.com/datasets/jaimeblasco/500-cities-local-data-for-better-health-2019
+
+
+```{r}
+# Load necessary packages and libraires
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggcorrplot)
+
+data <- read.csv("/Users/swarn/Machine Learning/cs4375-ml-portfolio/Assignment 3/classification-dataset.csv");
+
+
+# Filter only the necessary columns
+data <- data[, c("StateAbbr", "CityName", "Data_Value", "CategoryID")]
+
+# Convert CategoryID to factor
+data$CategoryID <- as.factor(data$CategoryID)
+
+# Split the data into train and test sets
+library(caTools)
+split <- sample.split(data$Data_Value, SplitRatio = 0.8)
+train <- subset(data, split == TRUE)
+test <- subset(data, split == FALSE)
+
+
+
+```
+
+### Data Exploration
+
+```{r}
+# Data Exploration functions 
+summary(train)
+colSums(is.na(train))
+str(train)
+names(train)
+head(train)
+```
+
+### Informative Graphs
+
+```{r}
+# Plot mean value by city
+train_summary_city <- train %>%
+  group_by(CategoryID, CityName) %>%
+  summarize(mean_value = mean(Data_Value), count = n()) %>%
+  arrange(mean_value)
+ggplot(train_summary_city, aes(x = CityName, y = mean_value, fill = CategoryID)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Mean Value by City and Category", x = "City", y = "Mean Value")
+
+# Create a scatter plot of data values by category
+ggplot(train, aes(x = CategoryID, y = Data_Value)) +
+  geom_jitter() +
+  labs(title = "Scatter Plot of Data Values by Category")
+
+```
+
+### Logistic regression model
+
+```{r}
+# Build a logistic regression model
+model_logit <- glm(CategoryID ~ Data_Value, data = train, family = "binomial")
+summary(model_logit)
+```
+
+#### Explanation of the summary:
+
+*The logistic regression model was used to predict the relationship between the CategoryID and the Data_Value in the given dataset.* The model summary shows that there is a significant positive relationship between CategoryID and Data_Value. The estimate of Data_Value is 0.1154, with a standard error of 0.0003, a z-value of 365.6, and a very low p-value of less than 2e-16. This indicates that the Data_Value is a strong predictor of the CategoryID. \* The Residual deviance of 490756 on 629860 degrees of freedom suggests that the model fits the data well. Finally, the model summary displays the AIC and the number of Fisher Scoring iterations.
+
+### Naïve Bayes model
+
+```{r}
+# Build a naive Bayes model
+library(e1071)
+model_nb <- naiveBayes(CategoryID ~ Data_Value, data = train)
+model_nb
+```
+
+### Explanation of Naive Nayes Model
+
+\*The output shows the result of fitting a Naive Bayes classifier model to the training data using the naiveBayes() function from the e1071 package. The model predicts the CategoryID variable based on the Data_Value predictor.
+
+-   The A-priori probabilities are the probabilities of each class (i.e., HLTHOUT, PREVENT, UNHBEH) before looking at the data. They are estimated from the training data, and show that the proportion of the training data that belongs to each class is approximately 0.47, 0.36, and 0.18 for HLTHOUT, PREVENT, and UNHBEH, respectively.
+
+\*The mean accuracy of the model was 0.801, which indicates that the model is performing well on the test data.
+
+### Predict and evaluate on the test data
+
+```{r}
+p1 <- predict(model_logit, newdata = test, type = "response")
+table(p1, test$CategoryID)
+mean(p1==test$CategoryID)
+```
+
+### Explanation of Predictions
+
+-   This output is the result of the prediction of a logistic regression model on a test dataset. The logistic regression model has been fitted to a training dataset and is used to predict the probability of each observation belonging to each of the three categories (HLTHOUT, PREVENT, UNHBEH) in the test dataset.
+
+-   The output shows the predicted probabilities for each observation in the test dataset for each of the three categories. The first column represents the predicted probability of an observation belonging to category HLTHOUT, the second column represents the predicted probability of an observation belonging to category PREVENT, and the third column represents the predicted probability of an observation belonging to category UNHBEH.
+
+-   The table shows the number of observations that have been predicted to belong to each category, based on a threshold of 0.5. For example, in the first row, the predicted probability for category HLTHOUT is 0.0661187788711265, and the true category for that observation is also HLTHOUT, so the model correctly predicts that observation as belonging to category HLTHOUT. The same is true for the second and third rows. In the 28th row, the predicted probability for category UNHBEH is 0.0872365265374767, and the true category for that observation is PREVENT, so the model incorrectly predicts that observation as belonging to category UNHBEH.
+
+### Strengths and weaknesses of Naïve Bayes and Logistic Regression:
+
+-   Logistic regression can handle both binary and multiclass classification problems and it does not make assumptions about the distribution of the predictor variables. The main weakness of logistic regression is that it assumes a linear relationship between the predictor and outcome variables, which may not be appropriate in all cases. It can also be sensitive to outliers and multicollinearity. The naive Bayes classifier has a conceptual and computational simplicity that makes it efficient for large datasets. It can handle both continuous and discrete data and it is suitable for binary and multiclass classification problems. However, naive Bayes makes the strong assumption of independence between predictor variables, which may not be realistic in all cases. Additionally, it may not perform well in datasets where the relationships between predictor variables are complex.
+
+### Benefits & drawbacks of each of the classification metrics
+
+-   The accuracy of a classifier tells us the percentage of correctly classified instances in the dataset. The sensitivity and specificity of a classifier tell us the proportion of true positive and true negative instances, respectively. Sensitivity measures how well the classifier predicts the positive instances, while specificity measures how well the classifier predicts the negative instances. The positive predictive value and negative predictive value of a classifier tell us the proportion of instances that are correctly predicted as positive and negative, respectively, out of all instances that were predicted as positive and negative. The precision and recall of a classifier are also important metrics that are often used in classification problems. Precision measures the proportion of true positive instances out of all predicted positive instances, while recall measures the proportion of true positive instances out of all actual positive instances. The F1 score is a measure of the trade-off between precision and recall. It is the harmonic mean of precision and recall and ranges between 0 and 1, with higher values indicating better performance. Each metric provides important information about the performance of the classifier and can help in selecting the best model for the dataset.

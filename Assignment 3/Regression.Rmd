@@ -1,0 +1,144 @@
+---
+title: "Regression for Linear Models R Notebook"
+author: "Swarn Singh and Ved Nigam"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+### We are exploring the relationship between CPU Cores and FPS for popular video games. The goal is to understand whether there is a linear relationship between both items
+
+#### Our dataset is from Kaggle: <https://www.kaggle.com/datasets/kritikseth/achieved-frames-per-second-fps-in-video-games>
+
+Dividing the data into 80/20 for train/test
+
+```{r}
+df <- read.csv("/Users/swarn/Machine Learning/cs4375-ml-portfolio/Assignment 3/fps-dataset.csv");
+
+set.seed(1234)
+i <- sample(1:nrow(df), .8*nrow(df), replace=FALSE)
+train <- df[i,]
+test <- df[-i,]
+```
+
+##### Data Exploration
+
+A quick explanation about each function we are using
+
+-   `summary()` - The summary() function provides a summary of the variables in a data frame in R. It calculates descriptive statistics such as mean, median, minimum, and maximum for each numeric variable, and provides frequency counts for categorical variables. When summary() is applied to a data frame train, it returns a summary of each variable in the data frame
+-   `colSums()` - calculates the sum of missing values for each column in the data frame. This is a useful way to identify which columns have missing data in a data set.
+-   `str()` - The str() function provides information about the structure of an R object. When applied to a data frame train, it returns a compact display of the internal structure of the data frame, including the data types of each variable, the number of observations, and the first few observations of each variable.
+-   `names()` - The names() function returns the variable names of a data frame or a list. When applied to a data frame train, it returns a character vector containing the names of each variable in the data frame.
+-   `head()` - The head() function returns the first few rows of a data frame or a matrix. When applied to a data frame train, it returns the first six rows of the data frame. This is a useful way to preview the data and check if it has been read in correctly.
+
+```{r}
+summary(train)
+colSums(is.na(train))
+str(train)
+names(train)
+head(train)
+```
+
+##### Informative Graphs
+
+```{r}
+plot(train$CpuNumberOfCores, train$FPS, main="Scatter plot of # of CPU Cores and FPS", xlab="# of CPU Cores", ylab="FPS")
+hist(train$CpuNumberOfCores, main="Histogram of CpuNumberOfCores", xlab="# of Cores", ylab="Frequency")
+```
+
+The scatter plot shows us a quick visual that the FPS in the dataset can go up to a 1000 and it's achievable with just 5 CPU Cores The histogram shows us that there are alot more instances on 5-10 cores within the dataset
+
+##### Linear Regression
+
+```{r}
+lm1 <- lm(formula = FPS ~ CpuNumberOfCores, data = df)
+summary(lm1)
+```
+
+-   Based on this output, we can conclude that the number of CPU cores is a significant predictor of FPS, and that the relationship is positive and moderately strong, but explains only a small amount of the variance in the dependent variable. \*The p-value is \<2.2e-16 for both the intercept and the CpuNumberOfCores variable, indicating that they are both highly statistically significant predictors of the dependent variable (FPS).
+-   The standard error is 0.0774 which is pretty low
+
+##### Plot Residuals
+
+```{r}
+par(mfrow = c(2,2))
+plot(lm1)
+```
+
+-   In the Residuals vs Fitted graph the line is kind of linear but dips after 150
+-   In the Q-Q graph, the line is running along the data from [-2,2], unclear as to why it goes so far apart after 2 though
+-   The Scale-location graph is similar to the Residuals vs Fitted but inverted. Constant slope after 150 on the x-axis
+-   Couldn't really understand the last graph and the zooming is unclear. Scaling is something that we ran out of time for
+
+##### Multiple Linear Regression
+
+```{r}
+lm2 <- lm(FPS ~ CpuNumberOfCores + CpuNumberOfThreads +  CpuFrequency, data = df)
+
+summary(lm2)
+#residuals
+par(mfrow = c(2,2))
+plot(lm2)
+#summary
+summary(lm2)
+```
+
+```{r}
+lm3 <- lm(FPS ~ CpuNumberOfCores + CpuNumberOfThreads +  CpuFrequency + CpuMultiplier + CpuProcessSize + CpuBaseClock + CpuNumberOfThreads + CpuTurboClock + CpuBaseClock, data = df)
+summary(lm3)
+#residuals
+par(mfrow = c(2,2))
+plot(lm3)
+#summary
+summary(lm3)
+```
+
+##### Predictions
+
+###### Model 1
+
+```{r}
+pred1 <- predict(lm1,newdata = test)
+cor1 <- cor(pred1,test$FPS)
+mse1 <- mean((pred1 - test$FPS)^2)
+rmse1 <- sqrt(mse1)
+head(pred1)
+cor1
+mse1
+rmse1
+```
+
+###### Model 2
+
+```{r}
+pred2 <- predict(lm2,newdata = test)
+cor2 <- cor(pred2,test$FPS)
+mse2 <- mean((pred2 - test$FPS)^2)
+rmse2 <- sqrt(mse2)
+head(pred2)
+cor2
+mse2
+rmse2
+```
+
+###### Model 3
+
+```{r}
+pred3 <- predict(lm3,newdata = test)
+cor3 <- cor(pred3,test$FPS)
+mse3 <- mean((pred3 - test$FPS)^2)
+rmse3 <- sqrt(mse3)
+head(pred3)
+cor3
+mse3
+rmse3
+```
+
+-   The code provided fits three linear regression models using different independent variables (NumberOfCPUCores, Log_NumberOfCPUCores, and Squared_NumberOfCPUCores) to predict the dependent variable (FPS). Each model makes different assumptions about the relationship between the variables, and the output displays performance metrics for each model when applied to the test data.
+
+\*Based on the results of the three models, it seems that Model 3 (Squared_NumberOfCPUCores) is the best model, as it has the highest correlation and the lowest MSE and RMSE values. This suggests that the relationship between NumberOfCPUCores and FPS may not be linear, but instead may follow a quadratic relationship. However, further analysis and exploration of the data is necessary to confirm this.
+
+-   Using the three models, the output displays the performance metrics for each model when applied to the test data. The correlation coefficients range from 0.14 to 0.39, indicating that there is a weak to moderate relationship between the predicted and actual values of FPS. The MSE values range from 6514 to 7546, while the RMSE values range from 80.7 to 86.9, with lower values indicating better model performance.
+
+-   Comparing the results of the three models, it seems that Model 3 (Squared_NumberOfCPUCores) performs the best, with the highest correlation and the lowest MSE and RMSE values. This indicates that the squared term of NumberOfCPUCores may be an important predictor of FPS. Model 2 (Log_NumberOfCPUCores) also performs well, with a higher correlation than Model 1 (NumberOfCPUCores) and similar MSE and RMSE values to Model 3. This suggests that the log transformation of NumberOfCPUCores may improve model performance. Overall, the results suggest that a more complex model may be necessary to accurately predict FPS based on the available independent variables.
